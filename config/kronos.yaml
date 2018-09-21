@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: kronos
+  name: kronos
+  namespace: esense
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: kronos
+  template:
+    metadata:
+      labels:
+        app: kronos
+    spec:
+      nodeSelector:
+        "cloud.google.com/gke-nodepool": "default-pool"
+      tolerations:
+      - key: "esense"
+        operator: "Equal"
+        value: "core"
+        effect: "NoSchedule"
+      containers:
+      - name: kronos
+        image: us.gcr.io/poised-ceiling-202111/kronos
+        ports:
+          - containerPort: 17010
+      imagePullSecrets:
+      - name: dockdev

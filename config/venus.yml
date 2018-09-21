@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: venus
+  name: venus
+  namespace: esense
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: venus
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  template:
+    metadata:
+      labels:
+        app: venus
+    spec:
+      nodeSelector:
+        "cloud.google.com/gke-nodepool": "default-pool"
+      tolerations:
+      - key: "esense"
+        operator: "Equal"
+        value: "core"
+        effect: "NoSchedule"
+      containers:
+      - name: venus
+        image: us.gcr.io/poised-ceiling-202111/venus
+        ports:
+        - name: http
+          containerPort: 80
+        livenessProbe:
+          httpGet:
+            path: /index.html
+            port: 80
+          initialDelaySeconds: 30
+          timeoutSeconds: 1
+      imagePullSecrets:
+      - name: dockdev

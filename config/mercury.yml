@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: mercury
+  name: mercury
+  namespace: esense
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: mercury
+  template:
+    metadata:
+      labels:
+        app: mercury
+    spec:
+      nodeSelector:
+        "cloud.google.com/gke-nodepool": "default-pool"
+      tolerations:
+      - key: "esense"
+        operator: "Equal"
+        value: "core"
+        effect: "NoSchedule"
+      volumes:
+      - name: mercury-key
+        secret:
+          secretName: mercury-key
+      containers:
+      - name: mercury
+        image: us.gcr.io/poised-ceiling-202111/mercury
+        env:
+          - name: "GCP_PROJECT"
+            value: "poised-ceiling-202111"
+          - name: "INFRASTRUCTURE"
+            value: "gcp"
+        ports:
+          - containerPort: 17040
+        volumeMounts:
+          - name: mercury-key
+            mountPath: /app/credentials
+      imagePullSecrets:
+      - name: dockdev
