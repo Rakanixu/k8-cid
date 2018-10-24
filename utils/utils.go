@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+const CREATE_RESOURCE = "create"
+const DELETE_RESOURCE = "delete"
 const K8sCidWorkingDir = "/.k8s-cid"
 
 func HomeDir() string {

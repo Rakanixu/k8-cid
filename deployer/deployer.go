@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 	"os"
 	"strings"
-	"time"
+	//"time"
 
 	"github.com/Rakanixu/k8-cid/utils"
 
@@ -61,14 +61,28 @@ func (d *Deployer) Create() error {
 			}
 		}
 
-		fmt.Println("Creating deployment ", deployment.k8sDeployment.GetObjectMeta().GetName())
-		deploymentsClient := d.Client.AppsV1().Deployments(ns)
-		result, err := deploymentsClient.Create(deployment.k8sDeployment)
-		if err != nil {
-			return err
+		// Creates deployment
+		if deployment.k8sDeployment.GetObjectMeta().GetName() != "" {
+			fmt.Println("Creating deployment ", deployment.k8sDeployment.GetObjectMeta().GetName())
+			deploymentsClient := d.Client.AppsV1().Deployments(ns)
+			result, err := deploymentsClient.Create(deployment.k8sDeployment)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Created deployment %s on namespace %s \n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetNamespace())
 		}
 
-		fmt.Printf("Created deployment %s on namespace %s \n", result.GetObjectMeta().GetName(), result.GetObjectMeta().GetNamespace())
+		// Creates service associated to deployment
+		if deployment.k8sService.GetObjectMeta().GetName() != "" {
+			fmt.Println("Creating service ", deployment.k8sService.GetObjectMeta().GetName())
+			svcClient := d.Client.CoreV1().Services(ns)
+			resultSvc, err := svcClient.Create(deployment.k8sService)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("Created service %s on namespace %s \n", resultSvc.GetObjectMeta().GetName(), resultSvc.GetObjectMeta().GetNamespace())
+
+		}
 	}
 
 	return nil
@@ -87,15 +101,32 @@ func (d *Deployer) Delete() error {
 			deploymentNamespaces = append(deploymentNamespaces, ns)
 		}
 
-		fmt.Println("Deleting deployment ", n)
-
-		deploymentsClient := d.Client.AppsV1().Deployments(ns)
-		if err := deploymentsClient.Delete(n, &metav1.DeleteOptions{
-			PropagationPolicy: &deletePolicy,
-		}); err != nil {
-			return err
+		// Deletes a deployment
+		if deployment.k8sDeployment.GetObjectMeta().GetName() != "" {
+			fmt.Println("Deleting deployment ", n)
+			deploymentsClient := d.Client.AppsV1().Deployments(ns)
+			if err := deploymentsClient.Delete(n, &metav1.DeleteOptions{
+				PropagationPolicy: &deletePolicy,
+			}); err != nil {
+				return err
+			}
+			fmt.Println("Deleted deployment ", n)
 		}
-		fmt.Println("Deleted deployment ", n)
+
+		nSvc := deployment.k8sService.GetObjectMeta().GetName()
+		nsSvc := deployment.k8sService.GetObjectMeta().GetNamespace()
+
+		// Deletes a service associated to a deployment
+		if deployment.k8sService.GetObjectMeta().GetName() != "" {
+			fmt.Println("Deleting service ", nSvc)
+			svcClient := d.Client.CoreV1().Services(nsSvc)
+			if err := svcClient.Delete(nSvc, &metav1.DeleteOptions{
+				PropagationPolicy: &deletePolicy,
+			}); err != nil {
+				return err
+			}
+			fmt.Println("Deleted service ", nSvc)
+		}
 	}
 
 	// Delete deployments's namespaces
@@ -124,7 +155,8 @@ func (d *Deployer) GenerateDeployment() error {
 			d.deployments = append(d.deployments, newDeployment(component, repo, commitTag))
 		}
 	}
-	namespace += time.Now().Format("2006-01-02-3-4")
+	namespace = namespace[0 : len(namespace)-1]
+	// namespace += time.Now().Format("2006-01-02-3-4")
 
 	for _, deployment := range d.deployments {
 		f, err := os.Open(fmt.Sprintf("config/%s.yaml", deployment.component))
@@ -140,6 +172,30 @@ func (d *Deployer) GenerateDeployment() error {
 		}
 
 		deployment.k8sDeployment.Namespace = namespace
+	}
+
+	return nil
+}
+
+func (d *Deployer) GenerateServices() error {
+
+	for _, deployment := range d.deployments {
+		srcYML := fmt.Sprintf("config/%s-svc.yml", deployment.component)
+		f, err := os.Open(srcYML)
+		if err != nil {
+			f, err = os.Open(srcYML)
+			if err != nil {
+				fmt.Println("Service not found for ", srcYML)
+			}
+		}
+
+		if err == nil {
+			if err = yaml.NewYAMLOrJSONDecoder(f, 1000).Decode(deployment.k8sService); err != nil {
+				return err
+			}
+
+			deployment.k8sService.Namespace = deployment.k8sDeployment.Namespace
+		}
 	}
 
 	return nil
@@ -164,6 +220,7 @@ type deployment struct {
 	repo          string
 	commitTag     string
 	k8sDeployment *appsv1.Deployment
+	k8sService    *apiv1.Service
 }
 
 func newDeployment(c string, r string, ct string) *deployment {
@@ -172,5 +229,6 @@ func newDeployment(c string, r string, ct string) *deployment {
 		repo:          r,
 		commitTag:     ct,
 		k8sDeployment: &appsv1.Deployment{},
+		k8sService:    &apiv1.Service{},
 	}
 }

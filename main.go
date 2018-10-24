@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strings"
-	"time"
+	//"time"
 
 	"github.com/Rakanixu/k8-cid/deployer"
 	"github.com/Rakanixu/k8-cid/utils"
@@ -42,6 +42,7 @@ func main() {
 	flag.Var(&repoComponents, "config", "Set which component / microservice belongs to each repository")
 	flag.Var(&reposCommits, "repos", "Repositories")
 	flag.Parse()
+	tailArgs := flag.Args()
 
 	// create hidden folder to store k8s-cid configuration data
 	utils.CreateDirIfNotExist(utils.HomeDir() + utils.K8sCidWorkingDir)
@@ -51,7 +52,6 @@ func main() {
 		var m map[string][]string
 		m = make(map[string][]string)
 		for i := 0; i < len(repoComponents); i++ {
-			fmt.Println(strings.Split(repoComponents[i], "="))
 			splitted := strings.Split(repoComponents[i], "=")
 			m[splitted[0]] = strings.Split(splitted[1], ",")
 		}
@@ -63,6 +63,8 @@ func main() {
 		if err := ioutil.WriteFile(utils.HomeDir()+utils.K8sCidWorkingDir+"/repositories-components.json", j, 0777); err != nil {
 			fmt.Println("Could not save configuration file.")
 		}
+		fmt.Println("Configuration file saved!")
+		return
 	}
 
 	// use the current context in kubeconfig
@@ -77,23 +79,40 @@ func main() {
 		panic(err.Error())
 	}
 
+	// create deployer
 	d, err := deployer.NewDeployer(clientset, reposCommits)
 	if err != nil {
 		panic(err.Error())
 	}
 
 	if err := d.GenerateDeployment(); err != nil {
-		fmt.Println(err)
-	}
-
-	if err := d.Create(); err != nil {
 		panic(err.Error())
 	}
-	time.Sleep(10 * time.Second)
 
-	if err := d.Delete(); err != nil {
+	if err := d.GenerateServices(); err != nil {
 		panic(err.Error())
 	}
+
+	// Create deployment
+	if len(tailArgs) == 1 && tailArgs[0] == utils.CREATE_RESOURCE {
+		if err := d.Create(); err != nil {
+			panic(err.Error())
+		}
+		// Delete deployment
+	} else if len(tailArgs) == 1 && tailArgs[0] == utils.DELETE_RESOURCE {
+		if err := d.Delete(); err != nil {
+			panic(err.Error())
+		}
+		// Invalid arguments
+	} else {
+		panic(fmt.Sprintf("Invalid arguments %s", tailArgs))
+	}
+
+	/* 	time.Sleep(10 * time.Second)
+
+	   	if err := d.Delete(); err != nil {
+	   		panic(err.Error())
+	   	} */
 
 	/*
 		for {
