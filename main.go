@@ -85,11 +85,7 @@ func main() {
 		panic(err.Error())
 	}
 
-	if err := d.GenerateDeployment(); err != nil {
-		panic(err.Error())
-	}
-
-	if err := d.GenerateServices(); err != nil {
+	if err := d.Init(); err != nil {
 		panic(err.Error())
 	}
 

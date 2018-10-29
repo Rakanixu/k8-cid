@@ -27,10 +27,10 @@ spec:
         operator: "Equal"
         value: "core"
         effect: "NoSchedule"
-      volumes:
-      - name: mercury-key
-        secret:
-          secretName: mercury-key
+      #volumes:
+      #- name: mercury-key
+      #  secret:
+      #    secretName: mercury-key
       containers:
       - name: mercury
         image: us.gcr.io/poised-ceiling-202111/mercury
@@ -41,8 +41,8 @@ spec:
             value: "gcp"
         ports:
           - containerPort: 17040
-        volumeMounts:
-          - name: mercury-key
-            mountPath: /app/credentials
+        #volumeMounts:
+        #  - name: mercury-key
+        #    mountPath: /app/credentials
       imagePullSecrets:
       - name: dockdev

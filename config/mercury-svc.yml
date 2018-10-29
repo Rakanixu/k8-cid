@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: mercury
+  name: mercury
+  namespace: esense
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: mercury_mapping
+      prefix: /mercury/
+      service: mercury
+      timeout_ms: 10000
+      cors:
+        origins: http://localhost:4200
+        methods: GET, PUT, POST, DELETE, OPTIONS
+        headers: Authorization, Content-Type
+      use_websocket: true
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: mercury_api_mapping
+      prefix: /api/
+      service: mercury
+      timeout_ms: 10000
+      cors:
+        origins: http://localhost:4200
+        methods: GET, PUT, POST, DELETE, OPTIONS
+        headers: Authorization, Content-Type
+      use_websocket: true
+spec:
+  type: ClusterIP
+  selector:
+    app: mercury
+  ports:
+  - port: 80
+    targetPort: 17040

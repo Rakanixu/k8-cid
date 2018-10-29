@@ -20,13 +20,6 @@ spec:
       labels:
         app: kronos
     spec:
-      nodeSelector:
-        "cloud.google.com/gke-nodepool": "default-pool"
-      tolerations:
-      - key: "esense"
-        operator: "Equal"
-        value: "core"
-        effect: "NoSchedule"
       containers:
       - name: kronos
         image: us.gcr.io/poised-ceiling-202111/kronos

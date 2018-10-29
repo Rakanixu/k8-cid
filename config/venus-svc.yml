@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: venus
+  name: venus
+  namespace: esense
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: venus_mapping
+      prefix: /venus/
+      service: venus
+      timeout_ms: 15000
+spec:
+  type: ClusterIP
+  selector:
+    app: venus
+  ports:
+  - port: 80
+    targetPort: 80

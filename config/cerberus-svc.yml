@@ -1,0 +1,27 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    service: cerberus
+  name: cerberus
+  namespace: esense
+  annotations:
+    getambassador.io/config: |
+      ---
+      apiVersion: ambassador/v0
+      kind: Mapping
+      name: cerberus_mapping
+      prefix: /cerberus/
+      service: cerberus
+      timeout_ms: 10000
+      cors: 
+        origins: http://localhost:4200
+        methods: GET, POST, PUT, DELETE, OPTIONS
+        headers: Authorization, Content-Type
+spec:
+  type: ClusterIP
+  selector:
+    app: cerberus
+  ports:
+  - port: 80
+    targetPort: 17030

@@ -1,0 +1,48 @@
+#apiVersion: v1
+#kind: Service
+#metadata:
+#  labels:
+#    service: ambassador-admin
+#  name: ambassador-admin
+#  namespace: public-latest
+#spec:
+#  type: NodePort
+#  ports:
+#  - name: ambassador-admin
+#    port: 8877
+#    targetPort: 8877
+#  selector:
+#    service: ambassador
+#---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  name: ambassador-public-latest
+  namespace: public-latest
+rules:
+- apiGroups: [""]
+  resources:
+  - services
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - configmaps
+  verbs: ["create", "update", "patch", "get", "list", "watch"]
+- apiGroups: [""]
+  resources:
+  - secrets
+  verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: ambassador-public-latest
+  namespace: public-latest
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: ambassador-public-latest
+subjects:
+- kind: ServiceAccount
+  name: ambassadorpublic-latest 
+  namespace: public-latest

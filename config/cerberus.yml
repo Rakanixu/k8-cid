@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    service: cerberus
+  name: cerberus
+  namespace: esense
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cerberus
+  template:
+    metadata:
+      labels:
+        app: cerberus
+    spec:
+      #volumes:
+      #- name: cerberus-key
+      #  secret:
+      #    secretName: cerberus-key   
+      containers:
+      - name: cerberus
+        image: us.gcr.io/poised-ceiling-202111/cerberus:latest
+        ports:
+          - containerPort: 17030
+        #volumeMounts:
+        #  - name: cerberus-key
+        #    mountPath: /app/credentials  
+      imagePullSecrets:
+      - name: gce-dockdev
