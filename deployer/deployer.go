@@ -48,23 +48,23 @@ func (d *Deployer) Init() error {
 	}
 	d.SetNamespace(namespace[0 : len(namespace)-1])
 
-	if err := d.GenerateServiceAccounts(); err != nil {
+	if err := d.generateServiceAccounts(); err != nil {
 		return err
 	}
 
-	if err := d.GenerateClusterRoles(); err != nil {
+	if err := d.generateClusterRoles(); err != nil {
 		return err
 	}
 
-	if err := d.GenerateClusterRoleBindings(); err != nil {
+	if err := d.generateClusterRoleBindings(); err != nil {
 		return err
 	}
 
-	if err := d.GenerateDeployment(); err != nil {
+	if err := d.generateDeployment(); err != nil {
 		return err
 	}
 
-	if err := d.GenerateServices(); err != nil {
+	if err := d.generateServices(); err != nil {
 		return err
 	}
 
@@ -154,10 +154,21 @@ func (d *Deployer) Create() error {
 			}
 
 			if resultSvc.Spec.Type == "NodePort" || resultSvc.Spec.Type == "LoadBalancer" {
-				fmt.Println(resultSvc.Spec.Ports)
-				fmt.Println(resultSvc.Spec.LoadBalancerIP)
+				for _, v := range resultSvc.Spec.Ports {
+					deployment.conn = append(deployment.conn, fmt.Sprintf("%s:%d", v.Name, v.NodePort))
+				}
+				// fmt.Println(resultSvc.Spec.LoadBalancerIP)
 			}
 			fmt.Printf("Created service %s on namespace %s \n", resultSvc.GetObjectMeta().GetName(), resultSvc.GetObjectMeta().GetNamespace())
+		}
+	}
+
+	fmt.Println("\nExposed services")
+	for _, deployment := range d.deployments {
+		if len(deployment.conn) > 0 {
+			for _, v := range deployment.conn {
+				fmt.Println(v)
+			}
 		}
 	}
 
@@ -290,7 +301,7 @@ func (d *Deployer) Delete() error {
 	return nil
 }
 
-func (d *Deployer) GenerateServiceAccounts() error {
+func (d *Deployer) generateServiceAccounts() error {
 	for _, deployment := range d.deployments {
 		srcYML := fmt.Sprintf("config/%s-svc-account.yml", deployment.component)
 		f, err := os.Open(srcYML)
@@ -313,7 +324,7 @@ func (d *Deployer) GenerateServiceAccounts() error {
 	return nil
 }
 
-func (d *Deployer) GenerateClusterRoles() error {
+func (d *Deployer) generateClusterRoles() error {
 	for _, deployment := range d.deployments {
 		srcYML := fmt.Sprintf("config/%s-cluster-role.yml", deployment.component)
 		f, err := os.Open(srcYML)
@@ -336,7 +347,7 @@ func (d *Deployer) GenerateClusterRoles() error {
 	return nil
 }
 
-func (d *Deployer) GenerateClusterRoleBindings() error {
+func (d *Deployer) generateClusterRoleBindings() error {
 	for _, deployment := range d.deployments {
 		srcYML := fmt.Sprintf("config/%s-cluster-role-binding.yml", deployment.component)
 		f, err := os.Open(srcYML)
@@ -366,7 +377,7 @@ func (d *Deployer) GenerateClusterRoleBindings() error {
 	return nil
 }
 
-func (d *Deployer) GenerateDeployment() error {
+func (d *Deployer) generateDeployment() error {
 	for _, deployment := range d.deployments {
 		f, err := os.Open(fmt.Sprintf("config/%s.yaml", deployment.component))
 		if err != nil {
@@ -384,12 +395,16 @@ func (d *Deployer) GenerateDeployment() error {
 		if deployment.k8sDeployment.Spec.Template.Spec.ServiceAccountName != "" {
 			deployment.k8sDeployment.Spec.Template.Spec.ServiceAccountName = deployment.k8sServiceAccount.Name
 		}
+		for k, v := range deployment.k8sDeployment.Spec.Template.Spec.Containers {
+			img := strings.Split(v.Image, ":")
+			deployment.k8sDeployment.Spec.Template.Spec.Containers[k].Image = fmt.Sprintf("%s:%s", img[0], deployment.commitTag)
+		}
 	}
 
 	return nil
 }
 
-func (d *Deployer) GenerateServices() error {
+func (d *Deployer) generateServices() error {
 	for _, deployment := range d.deployments {
 		srcYML := fmt.Sprintf("config/%s-svc.yml", deployment.component)
 		f, err := os.Open(srcYML)
@@ -413,7 +428,7 @@ func (d *Deployer) GenerateServices() error {
 }
 
 func (d *Deployer) SetNamespace(ns string) {
-	d.namespace = ns
+	d.namespace = strings.Replace(ns, ".", "-", -1)
 }
 
 func (d *Deployer) GetNamespace() string {
@@ -438,6 +453,7 @@ type deployment struct {
 	component             string
 	repo                  string
 	commitTag             string
+	conn                  []string
 	k8sDeployment         *appsv1.Deployment
 	k8sService            *apiv1.Service
 	k8sServiceAccount     *apiv1.ServiceAccount
@@ -450,6 +466,7 @@ func newDeployment(c string, r string, ct string) *deployment {
 		component:             c,
 		repo:                  r,
 		commitTag:             ct,
+		conn:                  []string{},
 		k8sDeployment:         &appsv1.Deployment{},
 		k8sService:            &apiv1.Service{},
 		k8sServiceAccount:     &apiv1.ServiceAccount{},
