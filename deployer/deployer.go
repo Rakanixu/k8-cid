@@ -366,8 +366,10 @@ func (d *Deployer) generateClusterRoleBindings() error {
 			deployment.k8sClusterRoleBinding.Namespace = d.GetNamespace()
 			for k, v := range deployment.k8sClusterRoleBinding.Subjects {
 				if v.Kind == "ServiceAccount" {
-					deployment.k8sClusterRoleBinding.Subjects[k].Name =
-						deployment.k8sClusterRoleBinding.Subjects[k].Name + d.GetNamespace()
+					if deployment.k8sClusterRoleBinding.Subjects[k].Name != "default" {
+						deployment.k8sClusterRoleBinding.Subjects[k].Name =
+							deployment.k8sClusterRoleBinding.Subjects[k].Name + d.GetNamespace()
+					}
 					deployment.k8sClusterRoleBinding.Subjects[k].Namespace = d.GetNamespace()
 				}
 			}

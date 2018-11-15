@@ -11,9 +11,13 @@ metadata:
       apiVersion: ambassador/v0
       kind: Mapping
       name: venus_mapping
-      prefix: /venus/
+      prefix: /
       service: venus
       timeout_ms: 15000
+      cors: 
+        origins: "*"
+        methods: GET, POST, PUT, DELETE, OPTIONS
+        headers: Authorization, Content-Type
 spec:
   type: ClusterIP
   selector:

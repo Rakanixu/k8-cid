@@ -39,6 +39,8 @@ spec:
             value: "poised-ceiling-202111"
           - name: "INFRASTRUCTURE"
             value: "gcp"
+          #- name: "KRONOS_CONN"
+          #  value: "http://kronos-local"
         ports:
           - containerPort: 17040
         #volumeMounts:
